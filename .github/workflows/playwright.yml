@@ -1,30 +1,26 @@
-name: Playwright Tests
+name: 🧪 Run Playwright Tests
 
 on:
   workflow_dispatch:
     inputs:
       test_suite:
-        description: "Test suite"
+        description: Test suite tag (e.g. test:e2e)
         required: false
-        default: "test:e2e"
-        type: choice
-        options:
-          - test:e2e
-          - test:smoke
-          - test:regression
+        default: test:e2e
+        type: string
       browser:
-        description: "Browser"
+        description: Browser to use
         required: false
-        default: "chromium"
+        default: chromium
         type: choice
         options:
           - chromium
           - firefox
           - webkit
       mode:
-        description: "Test mode"
+        description: Browser mode
         required: false
-        default: "headless"
+        default: headless
         type: choice
         options:
           - headless
@@ -33,6 +29,9 @@ on:
 jobs:
   playwright:
     runs-on: ubuntu-latest
+
+    env:
+      CI: "1"
 
     steps:
       - name: Checkout repository
@@ -47,25 +46,39 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps
+
+      - name: Install Xvfb
+        if: ${{ inputs.mode == 'headed' }}
+        run: sudo apt-get update && sudo apt-get install -y xvfb
+
       - name: 🧪 Run Playwright Tests
-        shell: pwsh
-        run: |
-          $suite = "${{ github.event.inputs.test_suite || 'test:e2e' }}"
-          $browser = "${{ github.event.inputs.browser || 'chromium' }}"
-          $mode = "${{ github.event.inputs.mode || 'headless' }}"
-
-          $tag = $suite -replace '^test:', ''
-          $browserFlag = "--project=$browser"
-
-          $modeFlag = @()
-          if ($mode -eq 'headed') {
-            $modeFlag = @('--headed')
-          }
-
-          npx playwright test --grep "@$tag" $browserFlag @modeFlag --reporter=dot,html
+        shell: bash
         env:
-          CI: "1"
-        
+          TEST_SUITE: ${{ inputs.test_suite }}
+          BROWSER: ${{ inputs.browser }}
+          MODE: ${{ inputs.mode }}
+        run: |
+          SUITE="${TEST_SUITE:-test:e2e}"
+          BROWSER="${BROWSER:-chromium}"
+          MODE="${MODE:-headless}"
+
+          TAG="${SUITE#test:}"
+
+          if [ "$MODE" = "headed" ]; then
+            xvfb-run --auto-servernum npx playwright test \
+              --grep "@$TAG" \
+              --project="$BROWSER" \
+              --headed \
+              --reporter=dot,html
+          else
+            npx playwright test \
+              --grep "@$TAG" \
+              --project="$BROWSER" \
+              --reporter=dot,html
+          fi
+
       - name: 📊 Upload Playwright HTML Report
         if: always()
         uses: actions/upload-artifact@v4
