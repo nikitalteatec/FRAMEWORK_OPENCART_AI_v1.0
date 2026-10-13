@@ -82,7 +82,7 @@ jobs:
           BROWSER="${BROWSER:-chromium}"
           MODE="${MODE:-headless}"
 
-          echo "Selected suite: $SUITE",
+          echo "Selected suite: $SUITE"
           echo "Selected browser: $BROWSER"
           echo "Browser mode: $MODE"
 
