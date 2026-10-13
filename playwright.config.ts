@@ -22,7 +22,6 @@ export default defineConfig({
     ignoreHTTPSErrors: true,
     permissions: ['geolocation'],
   },
-  grep: /@master/,
   projects: [
     {
       name: 'chromium',
