@@ -1,130 +1,85 @@
-name: 🧪 Run Playwright Tests
-
+#To run manually: go to your repo → Actions → Playwright Tests → Run workflow → choose your parameters → Run.
+name: 🎭 Playwright Tests
 on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
   workflow_dispatch:
     inputs:
       test_suite:
-        description: Test suite to run
-        required: true
-        default: regression
+        description: "Select test suite"
         type: choice
         options:
-          - master
-          - sanity
-          - regression
-          - api
-          - web
-          - datadriven
-
+          - test:master
+          - test:sanity
+          - test:regression
+          - test:e2e
+          - test:api
+          - test:web
+          - test:datadriven
+        default: "test:e2e"
       browser:
-        description: Browser to use
-        required: true
-        default: chromium
+        description: "Select browser"
         type: choice
         options:
           - chromium
           - firefox
           - webkit
-
+        default: "chromium"
       mode:
-        description: Browser mode
-        required: true
-        default: headless
+        description: "Run mode"
         type: choice
         options:
           - headless
           - headed
-
+        default: "headless"
 jobs:
-  playwright:
-    name: Playwright Tests
-    runs-on: ubuntu-latest
-
-    env:
-      CI: "1"
-
+  test:
+    timeout-minutes: 60
+    runs-on: windows-latest
     steps:
-      # 1. Checkout repository
-      - name: Checkout repository
+      - name: 📥 Checkout Repository
         uses: actions/checkout@v4
-
-      # 2. Setup Node.js
-      - name: Setup Node.js
+      - name:  Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
-          cache: npm
-
-      # 3. Install dependencies
-      - name: Install dependencies
+          node-version: lts/*
+      - name: 📦 Install Dependencies
         run: npm ci
-
-      # 4. Install Playwright browsers and system dependencies
-      - name: Install Playwright browsers
+      - name: 🎭 Install Playwright Browsers
         run: npx playwright install --with-deps
-
-      # 5. Install Xvfb for headed browser execution on Ubuntu
-      - name: Install Xvfb
-        if: ${{ inputs.mode == 'headed' }}
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y xvfb
-
-      # 6. Run selected Playwright tests
+      - name: ⚙ Create .env File
+        run: Copy-Item .env.example .env
       - name: 🧪 Run Playwright Tests
-        shell: bash
-        env:
-          TEST_SUITE: ${{ inputs.test_suite }}
-          BROWSER: ${{ inputs.browser }}
-          MODE: ${{ inputs.mode }}
         run: |
-          SUITE="${TEST_SUITE:-regression}"
-          BROWSER="${BROWSER:-chromium}"
-          MODE="${MODE:-headless}"
-
-          echo "Selected suite: $SUITE"
-          echo "Selected browser: $BROWSER"
-          echo "Browser mode: $MODE"
-
-          if [ "$MODE" = "headed" ]; then
-            xvfb-run --auto-servernum npx playwright test \
-              --grep "@$SUITE" \
-              --project="$BROWSER" \
-              --headed \
-              --reporter=dot,html
-          else
-            npx playwright test \
-              --grep "@$SUITE" \
-              --project="$BROWSER" \
-              --reporter=dot,html
-          fi
-
-      # 7. Upload Playwright HTML report
+          $suite = "${{ github.event.inputs.test_suite || 'test:e2e' }}"
+          $browser = "${{ github.event.inputs.browser || 'chromium' }}"
+          $mode = "${{ github.event.inputs.mode || 'headless' }}"
+          $tag = $suite -replace 'test:', ''
+          $browserFlag = "--project=$browser"
+          $modeFlag = if ($mode -eq 'headed') { '--headed' } else { '' }
+          npx playwright test --grep "@$tag" $browserFlag $modeFlag --reporter=dot --output=test-results
+        env:
+          CI: "1"
       - name: 📊 Upload Playwright HTML Report
-        if: ${{ always() }}
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: playwright-report
-          path: playwright-report/
-          if-no-files-found: warn
+          path: reports/
           retention-days: 30
-
-      # 8. Upload custom report
       - name: 📋 Upload Custom Report
-        if: ${{ always() }}
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: custom-report
           path: custom-report/
-          if-no-files-found: warn
           retention-days: 30
-
-      # 9. Upload Allure results
       - name: 📈 Upload Allure Results
-        if: ${{ always() }}
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: allure-results
           path: allure-results/
-          if-no-files-found: warn
           retention-days: 30
