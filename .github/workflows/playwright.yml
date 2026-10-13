@@ -4,22 +4,31 @@ on:
   workflow_dispatch:
     inputs:
       test_suite:
-        description: Test suite tag (e.g. test:e2e)
-        required: false
-        default: test:e2e
-        type: string
+        description: Test suite to run
+        required: true
+        default: regression
+        type: choice
+        options:
+          - master
+          - sanity
+          - regression
+          - api
+          - web
+          - datadriven
+
       browser:
         description: Browser to use
-        required: false
+        required: true
         default: chromium
         type: choice
         options:
           - chromium
           - firefox
           - webkit
+
       mode:
         description: Browser mode
-        required: false
+        required: true
         default: headless
         type: choice
         options:
@@ -28,31 +37,40 @@ on:
 
 jobs:
   playwright:
+    name: Playwright Tests
     runs-on: ubuntu-latest
 
     env:
       CI: "1"
 
     steps:
+      # 1. Checkout repository
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      # 2. Setup Node.js
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: npm
 
+      # 3. Install dependencies
       - name: Install dependencies
         run: npm ci
 
+      # 4. Install Playwright browsers and system dependencies
       - name: Install Playwright browsers
         run: npx playwright install --with-deps
 
+      # 5. Install Xvfb for headed browser execution on Ubuntu
       - name: Install Xvfb
         if: ${{ inputs.mode == 'headed' }}
-        run: sudo apt-get update && sudo apt-get install -y xvfb
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y xvfb
 
+      # 6. Run selected Playwright tests
       - name: 🧪 Run Playwright Tests
         shell: bash
         env:
@@ -60,27 +78,30 @@ jobs:
           BROWSER: ${{ inputs.browser }}
           MODE: ${{ inputs.mode }}
         run: |
-          SUITE="${TEST_SUITE:-test:e2e}"
+          SUITE="${TEST_SUITE:-regression}"
           BROWSER="${BROWSER:-chromium}"
           MODE="${MODE:-headless}"
 
-          TAG="${SUITE#test:}"
+          echo "Selected suite: $SUITE"
+          echo "Selected browser: $BROWSER"
+          echo "Browser mode: $MODE"
 
           if [ "$MODE" = "headed" ]; then
             xvfb-run --auto-servernum npx playwright test \
-              --grep "@$TAG" \
+              --grep "@$SUITE" \
               --project="$BROWSER" \
               --headed \
               --reporter=dot,html
           else
             npx playwright test \
-              --grep "@$TAG" \
+              --grep "@$SUITE" \
               --project="$BROWSER" \
               --reporter=dot,html
           fi
 
+      # 7. Upload Playwright HTML report
       - name: 📊 Upload Playwright HTML Report
-        if: always()
+        if: ${{ always() }}
         uses: actions/upload-artifact@v4
         with:
           name: playwright-report
@@ -88,8 +109,9 @@ jobs:
           if-no-files-found: warn
           retention-days: 30
 
+      # 8. Upload custom report
       - name: 📋 Upload Custom Report
-        if: always()
+        if: ${{ always() }}
         uses: actions/upload-artifact@v4
         with:
           name: custom-report
@@ -97,8 +119,9 @@ jobs:
           if-no-files-found: warn
           retention-days: 30
 
+      # 9. Upload Allure results
       - name: 📈 Upload Allure Results
-        if: always()
+        if: ${{ always() }}
         uses: actions/upload-artifact@v4
         with:
           name: allure-results
