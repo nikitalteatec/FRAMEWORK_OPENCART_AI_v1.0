@@ -8,17 +8,17 @@ on:
   workflow_dispatch:
     inputs:
       test_suite:
-        description: "Select test suite"
+        description: Test suite to run
+        required: true
+        default: regression
         type: choice
         options:
-          - test:master
-          - test:sanity
-          - test:regression
-          - test:e2e
-          - test:api
-          - test:web
-          - test:datadriven
-        default: "test:e2e"
+          - master
+          - sanity
+          - regression
+          - api
+          - web
+          - datadriven
       browser:
         description: "Select browser"
         type: choice
@@ -53,9 +53,21 @@ jobs:
         run: Copy-Item .env.example .env
       - name: 🧪 Run Playwright Tests
         run: |
-          $suite = "${{ github.event.inputs.test_suite || 'test:e2e' }}"
-          $browser = "${{ github.event.inputs.browser || 'chromium' }}"
-          $mode = "${{ github.event.inputs.mode || 'headless' }}"
+          $suite = if ($env:TEST_SUITE) {
+            $env:TEST_SUITE
+          } else {
+            'regression'
+          }
+          $browser = if ($env:BROWSER) {
+            $env:BROWSER
+          } else {
+            'chromium'
+          }
+          $mode = if ($env:MODE) {
+            $env:MODE
+          } else {
+            'headless'
+          }
           $tag = $suite -replace 'test:', ''
           $browserFlag = "--project=$browser"
           $modeFlag = if ($mode -eq 'headed') { '--headed' } else { '' }
