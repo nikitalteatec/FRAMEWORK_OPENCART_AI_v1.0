@@ -1,0 +1,10 @@
+1) Installed Jenkins
+2) Installed required plugins (Plugins)
+3) Configured path ( Tools) - git, nodejs, allure
+4) Configured email ( System)
+
+5) Created new Item(Job)  -- with Pipeline
+6) Run the pipeline -- published reports and trigger email.
+
+
+

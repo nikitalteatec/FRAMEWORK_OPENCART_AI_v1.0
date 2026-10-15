@@ -1,0 +1,22 @@
+Over the last 6 sessions, we successfully built a complete Hybrid Test Automation Framework from scratch. Please pull the latest code and explore the project.
+
+🎭 Playwright + TypeScript Hybrid Automation Framework
+-----------------------
+
+A production-grade automation framework for Web UI, REST API, and Database Testing built using Playwright + TypeScript with the Page Object Model (POM) design pattern.
+
+Key Features:
+-----------
+✅ Web UI Automation (OpenCart)
+✅ REST API Testing
+✅ Database Validation
+✅ Data-Driven Testing (JSON, CSV & Excel)
+✅ HTML & Allure Reporting
+✅ Docker Support
+✅ CI/CD Integration (GitHub Actions & Jenkins)
+
+🔗 GitHub Repository:
+https://github.com/pavanoltraining/Playwright_Opencart_AI_v1
+
+Please clone the repository, go through the framework structure, check README.md file and practice.
+
